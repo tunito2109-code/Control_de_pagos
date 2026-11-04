@@ -84,7 +84,7 @@ main{max-width:600px;margin:0 auto;padding:18px 16px 48px;display:flex;flex-dire
 .row .s{font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .row .amt{white-space:nowrap;font-variant-numeric:tabular-nums}
 .row .amt.empty{color:var(--blue);font-size:14px;font-weight:500}
-.row .chev{width:8px;height:14px;flex:none;color:var(--line)}
+.chev{width:8px;height:14px;flex:none;color:var(--line)}
 .row.paid .t,.row.paid .amt{color:var(--muted)}
 .chk{flex:none;width:28px;height:28px;border-radius:14px;border:2px solid var(--line);background:var(--card);display:grid;place-items:center;padding:0;transition:background .15s,border-color .15s}
 .chk svg{width:14px;height:14px;opacity:0}
@@ -160,6 +160,24 @@ main{max-width:600px;margin:0 auto;padding:18px 16px 48px;display:flex;flex-dire
 .catadd .btn{width:auto;padding:10px 16px;border-radius:9px}
 .sheet .segc{margin-bottom:14px;grid-template-columns:repeat(3,minmax(0,1fr))}
 
+.inc{display:flex;flex-direction:column;margin:-4px 0 12px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.xrow{display:flex;align-items:center;gap:10px;background:none;border:0;padding:9px 0;text-align:left;width:100%;color:inherit;border-bottom:1px dashed var(--line)}
+.xrow .t{flex:1;min-width:0;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.xrow .t small{color:var(--muted);font-size:13px;margin-left:6px}
+.xrow .amt{color:var(--green);font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.linkbtn{background:none;border:0;color:var(--blue);font-weight:600;font-size:15px;padding:10px 0;text-align:left;display:flex;align-items:center;gap:6px}
+.linkbtn svg{width:16px;height:16px}
+.inctotal{display:flex;justify-content:space-between;font-size:15px;padding-top:4px}
+.inctotal b{font-variant-numeric:tabular-nums}
+.usd{font-size:22px;font-weight:700;color:var(--celeste);margin:-6px 0 12px;font-variant-numeric:tabular-nums}
+.goal{border-top:1px solid var(--line);padding-top:12px;margin-top:4px}
+.goal .gl{display:flex;justify-content:space-between;gap:8px;font-size:14px;margin-bottom:8px}
+.goal .gl b{font-weight:600}
+.two-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mv{flex:none;width:32px;height:32px;border-radius:16px;display:grid;place-items:center}
+.mv svg{width:16px;height:16px}
+.mv.in{background:var(--green-soft);color:var(--green)}
+.mv.out{background:var(--red-soft);color:var(--red)}
 .toast{position:fixed;left:50%;bottom:calc(28px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(16px);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:20px;font-weight:600;font-size:14px;opacity:0;transition:.2s;z-index:40;pointer-events:none;white-space:nowrap}
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -181,11 +199,12 @@ const DEF_CATS={
   comp:["Supermercado","Combustible / Auto","Salidas / Ocio","Casa","Servicios","Otros"]
 };
 const DIV={mitad:"Mitad y mitad",rodri:"Todo de Rodri",sabri:"Todo de Sabri"};
-const TABS=["fijos","chicos","comp","hist"];
-const COLL={fijos:"fijos",chicos:"chicos",compartidos:"comp",historial:"hist"};
+const TABS=["fijos","chicos","comp","ahorro","hist"];
+const SWIPE=["fijos","chicos","comp","ahorro"];
+const COLL={fijos:"fijos",chicos:"chicos",compartidos:"comp",historial:"hist",extras:"extras",ahorros:"ahorros"};
 const CATKEY={fijos:"fijos",chicos:"chicos",compartidos:"comp"};
 
-const S={sueldo:null,fijos:[],chicos:[],comp:[],hist:[],cats:null};
+const S={sueldo:null,fijos:[],chicos:[],comp:[],hist:[],cats:null,extras:[],ahorros:[],meta:null};
 let tab="fijos";
 try{const h=location.hash.slice(1); if(TABS.includes(h)) tab=h;}catch(e){}
 
@@ -201,6 +220,7 @@ function parseMoney(str){
   else if((s.match(/\./g)||[]).length>1||/\.\d{3}$/.test(s)) s=s.replace(/\./g,"");
   const n=parseFloat(s); return isFinite(n)?Math.round(n*100)/100:null;
 }
+const usdNum=n=>"US$ "+new Intl.NumberFormat("es-AR",{maximumFractionDigits:2}).format(Math.abs(Number(n)||0));
 const fmtIn=n=>n==null||n===""?"":new Intl.NumberFormat("es-AR",{maximumFractionDigits:2}).format(n);
 const today=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
 function defMes(){ const d=new Date(); if(d.getDate()<=15) d.setMonth(d.getMonth()-1,1); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"); }
@@ -221,6 +241,7 @@ const SEED={sueldo:1848130.76,
   hist:[]};
 function applyData(v){
   S.sueldo=v.sueldo??null; S.fijos=v.fijos||[]; S.chicos=v.chicos||[]; S.comp=v.comp||[]; S.hist=v.hist||[];
+  S.extras=v.extras||[]; S.ahorros=v.ahorros||[]; S.meta=v.meta||null;
   S.cats=v.cats&&v.cats.fijos?v.cats:JSON.parse(JSON.stringify(DEF_CATS));
   for(const k of ["fijos","chicos","comp"]){ if(!Array.isArray(S.cats[k])) S.cats[k]=[...DEF_CATS[k]];
     for(const x of S[k]) if(x.cat&&!S.cats[k].includes(x.cat)) S.cats[k].push(x.cat); }
@@ -231,7 +252,7 @@ function load(){
   applyData(v||JSON.parse(JSON.stringify(SEED)));
   if(!v) save();
 }
-function save(){ try{ localStorage.setItem(LKEY,JSON.stringify({sueldo:S.sueldo,fijos:S.fijos,chicos:S.chicos,comp:S.comp,hist:S.hist,cats:S.cats})); return true; }catch(e){ toast("No se pudo guardar en este celu"); return false; } }
+function save(){ try{ localStorage.setItem(LKEY,JSON.stringify({sueldo:S.sueldo,fijos:S.fijos,chicos:S.chicos,comp:S.comp,hist:S.hist,cats:S.cats,extras:S.extras,ahorros:S.ahorros,meta:S.meta})); return true; }catch(e){ toast("No se pudo guardar en este celu"); return false; } }
 function put(coll,id,data){ const a=S[COLL[coll]]; const i=a.findIndex(x=>x.id===id); if(i>=0) a[i]={id,...data}; else a.push({id,...data}); const ok=save(); render(); return ok; }
 function del(coll,id){ S[COLL[coll]]=S[COLL[coll]].filter(x=>x.id!==id); save(); render(); }
 
@@ -247,36 +268,48 @@ function calc(){
     if(x.pagador==="Sabri") ps+=m; else pr+=m;
     parteR+= x.division==="rodri"?m : x.division==="sabri"?0 : m/2; }
   const neto=Math.round((pr-parteR)*100)/100;
-  return {fijos,totalF,pagado,falta:totalF-pagado,totalC,sueldo,saldo:sueldo-totalF,resto:sueldo-totalF-totalC,pr,ps,totalS,neto};
+  const totalX=S.extras.reduce((t,x)=>t+(Number(x.monto)||0),0);
+  const ingresos=sueldo+totalX;
+  let ahARS=0,ahUSD=0,ahMes=0;
+  for(const a of S.ahorros){ const sg=a.tipo==="retiro"?-1:1, m=Number(a.monto)||0;
+    if(a.moneda==="USD"){ ahUSD+=sg*m; if(a.abierto) ahMes+=sg*(Number(a.pesos)||0); }
+    else { ahARS+=sg*m; if(a.abierto) ahMes+=sg*m; } }
+  return {fijos,totalF,pagado,falta:totalF-pagado,totalC,sueldo,totalX,ingresos,saldo:ingresos-totalF,resto:ingresos-totalF-totalC-ahMes,
+    ahARS,ahUSD,ahMes,pr,ps,totalS,neto};
 }
 
 /* ---------- vistas ---------- */
 const CHECK='<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const CHEV='<svg class="chev" viewBox="0 0 8 14" fill="none" aria-hidden="true"><path d="M1 1l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const CLOCK='<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7.2" stroke="currentColor" stroke-width="1.8"/><path d="M10 6v4.3l2.8 1.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+const ARROW_IN='<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 2.5v10M3.5 8.5L8 13l4.5-4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const ARROW_OUT='<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 13.5v-10M3.5 7.5L8 3l4.5 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const PLUS='<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>';
 const TAGS='<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 5h9M15 5h2M3 10h2M8 10h9M3 15h11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="13.5" cy="5" r="1.8" stroke="currentColor" stroke-width="1.6"/><circle cx="6.5" cy="10" r="1.8" stroke="currentColor" stroke-width="1.6"/><circle cx="15.5" cy="15" r="1.8" stroke="currentColor" stroke-width="1.6"/></svg>';
 const MINUS='<svg viewBox="0 0 22 22" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="9" fill="currentColor"/><path d="M7 11h8" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>';
 const app=document.getElementById("app"), topbar=document.getElementById("topbar");
-const TITLES={fijos:"Gastos fijos",chicos:"Del día",comp:"Rodri y Sabri",hist:"Historial"};
-const SEGN={fijos:"Fijos",chicos:"Del día",comp:"Compartidos",hist:"Historial"};
+const TITLES={fijos:"Gastos fijos",chicos:"Del día",comp:"Rodri y Sabri",ahorro:"Ahorros",hist:"Historial"};
+const SEGN={fijos:"Fijos",chicos:"Del día",comp:"Compartidos",ahorro:"Ahorros"};
 const ADD={fijos:"fijos",chicos:"chicos",comp:"compartidos"};
 
 function renderTop(){
   const mes=new Date().toLocaleDateString("es-AR",{month:"long",year:"numeric"});
   topbar.innerHTML=`<div class="titlerow"><div><div class="kicker">${esc(mes)}</div><h1>${TITLES[tab]}</h1></div>
-    <div class="tbtns">${tab!=="hist"?`<button class="circ soft" id="catsBtn" aria-label="Editar categorías">${TAGS}</button>
-    <button class="circ plus" id="addBtn" aria-label="Agregar">${PLUS}</button>`:""}</div></div>
-    <nav class="segc" aria-label="Secciones">${TABS.map(t=>`<button data-tab="${t}" aria-current="${t===tab?"page":"false"}">${SEGN[t]}</button>`).join("")}</nav>`;
+    <div class="tbtns">${tab!=="hist"?`<button class="circ soft" id="histBtn" aria-label="Ver historial">${CLOCK}</button>`:""}
+    ${["fijos","chicos","comp"].includes(tab)?`<button class="circ soft" id="catsBtn" aria-label="Editar categorías">${TAGS}</button>`:""}
+    ${tab!=="hist"?`<button class="circ plus" id="addBtn" aria-label="Agregar">${PLUS}</button>`:""}</div></div>
+    <nav class="segc" aria-label="Secciones">${SWIPE.map(t=>`<button data-tab="${t}" aria-current="${t===tab?"page":"false"}">${SEGN[t]}</button>`).join("")}</nav>`;
   topbar.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>goTab(b.dataset.tab));
   const cb=document.getElementById("catsBtn"); if(cb) cb.onclick=()=>openCats(tab==="comp"?"comp":tab);
-  const ab=document.getElementById("addBtn"); if(ab) ab.onclick=()=>openForm(ADD[tab],null);
+  const ab=document.getElementById("addBtn"); if(ab) ab.onclick=()=>tab==="ahorro"?openAhorro(null,"deposito"):openForm(ADD[tab],null);
+  const hb=document.getElementById("histBtn"); if(hb) hb.onclick=()=>goTab("hist");
 }
 function goTab(t){ if(t===tab) return; tab=t; try{history.replaceState(null,"","#"+t)}catch(e){} window.scrollTo(0,0); render(); }
 
 function render(){
   renderTop();
   const c=calc();
-  const h= tab==="fijos"?viewFijos(c): tab==="chicos"?viewChicos(c): tab==="hist"?viewHist(c): viewComp(c);
+  const h= tab==="fijos"?viewFijos(c): tab==="chicos"?viewChicos(c): tab==="hist"?viewHist(c): tab==="ahorro"?viewAhorro(c): viewComp(c);
   const y=window.scrollY; app.innerHTML=h; window.scrollTo(0,y);
   bindView();
 }
@@ -287,6 +320,9 @@ function viewFijos(c){
   let h=`<section class="card pad" aria-label="Resumen">
     <div class="salary"><label for="sueldoIn">Sueldo del mes</label>
       <span class="in"><span class="lbl">$</span><input id="sueldoIn" inputmode="decimal" placeholder="0" value="${fmtIn(S.sueldo)}" aria-label="Sueldo del mes en pesos"></span></div>
+    <div class="inc">${[...S.extras].sort((a,b)=>(a.fecha||"").localeCompare(b.fecha||"")).map(x=>`<button class="xrow" data-extra="${esc(x.id)}"><span class="t">${esc(x.desc)}<small>${esc(fmtDate(x.fecha))}</small></span><span class="amt">+ ${money(x.monto)}</span>${CHEV}</button>`).join("")}
+      <button class="linkbtn" id="addExtra">${PLUS}Agregar ingreso extra</button>
+      ${S.extras.length?`<div class="inctotal"><span class="lbl">Total ingresos del mes</span><b>${money(c.ingresos)}</b></div>`:""}</div>
     <div class="lbl">${c.saldo<0?"Te faltan para cubrir los fijos":"Te queda después de los fijos"}</div>
     <div class="big ${c.saldo<0?"neg":"pos"}">${money(Math.abs(c.saldo))}</div>
     <div class="prog" role="progressbar" aria-label="Porcentaje pagado" aria-valuenow="${Math.round(pct)}" aria-valuemin="0" aria-valuemax="100"><span class="${pct>=100?"full":""}" style="width:${pct}%"></span></div>
@@ -315,8 +351,9 @@ function viewChicos(c){
   let h=`<section class="card pad" aria-label="Resumen">
     <div class="lbl">Gastaste en el día a día</div>
     <div class="big blue">${money(c.totalC)}</div>
-    <div class="stats two">
-      <div><b>${money(c.saldo)}</b><small><i class="dot bg-ink"></i>Libre tras los fijos</small></div>
+    <div class="stats${c.ahMes?"":" two"}">
+      <div><b>${money(c.saldo)}</b><small><i class="dot bg-ink"></i>Libre tras fijos</small></div>
+      ${c.ahMes?`<div><b class="c-cel">${money(c.ahMes)}</b><small><i class="dot bg-cel"></i>Ahorraste</small></div>`:""}
       <div><b class="${c.resto<0?"c-red":"c-green"}">${money(c.resto)}</b><small><i class="dot ${c.resto<0?"bg-red":"bg-green"}"></i>Te queda ahora</small></div>
     </div></section>
   <section><div class="ghead"><span>Movimientos</span><span>${list.length}</span></div><div class="card">`;
@@ -354,6 +391,41 @@ function viewComp(c){
   return h+`</div></section>`;
 }
 
+function viewAhorro(c){
+  const list=[...S.ahorros].sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||"")||(b.creado||0)-(a.creado||0));
+  const mt=S.meta;
+  let goal="";
+  if(mt&&mt.monto>0){
+    const tiene=mt.moneda==="USD"?c.ahUSD:c.ahARS, pct=Math.max(0,Math.min(100,tiene/mt.monto*100));
+    const fmt=mt.moneda==="USD"?usdNum:money;
+    goal=`<div class="goal"><div class="gl"><b>Meta: ${esc(mt.nombre||"Ahorro")}</b><span class="${pct>=100?"c-green":"lbl"}">${pct>=100?"¡Cumplida!":Math.floor(pct)+"%"}</span></div>
+      <div class="prog" role="progressbar" aria-label="Avance de la meta" aria-valuenow="${Math.round(pct)}" aria-valuemin="0" aria-valuemax="100" style="margin-bottom:8px"><span class="${pct>=100?"full":""}" style="width:${pct}%"></span></div>
+      <div class="gl"><span class="lbl">${fmt(Math.max(0,tiene))} de ${fmt(mt.monto)}</span><span class="lbl">${pct<100?"Faltan "+fmt(mt.monto-tiene):""}</span></div></div>`;
+  }
+  let h=`<section class="card pad" aria-label="Resumen de ahorros">
+    <div class="lbl">Tenés ahorrado</div>
+    <div class="big ${c.ahARS<0?"neg":"blue"}">${c.ahARS<0?"−":""}${money(Math.abs(c.ahARS))}</div>
+    ${c.ahUSD?`<div class="usd">${c.ahUSD<0?"−":""}${usdNum(c.ahUSD)}</div>`:""}
+    <div class="stats two" style="margin-bottom:12px">
+      <div><b class="c-cel">${money(c.ahMes)}</b><small><i class="dot bg-cel"></i>Este mes</small></div>
+      <div><b class="${c.resto<0?"c-red":"c-green"}">${money(c.resto)}</b><small><i class="dot ${c.resto<0?"bg-red":"bg-green"}"></i>Te queda para gastar</small></div>
+    </div>
+    ${goal}
+    <button class="linkbtn" id="metaBtn">${mt?"Cambiar meta":PLUS+"Ponerte una meta"}</button>
+  </section>
+  <div class="two-btns"><button class="btn green" id="ahIn">Guardar plata</button><button class="btn danger" id="ahOut">Sacar plata</button></div>
+  <section><div class="ghead"><span>Movimientos</span><span>${list.length}</span></div><div class="card">`;
+  if(!list.length) h+=`<div class="empty-list">Todavía no guardaste nada. Tocá “Guardar plata” para empezar.</div>`;
+  for(const a of list){
+    const out=a.tipo==="retiro", isU=a.moneda==="USD";
+    const sub=[fmtDate(a.fecha),isU&&a.pesos?(out?"Recibiste ":"Usaste ")+money(a.pesos):null,a.abierto?null:"Mes cerrado"].filter(Boolean).join(" · ");
+    h+=`<div class="row"><span class="mv ${out?"out":"in"}" aria-label="${out?"Retiro":"Depósito"}">${out?ARROW_OUT:ARROW_IN}</span>
+      <button class="body" data-ahorro="${esc(a.id)}"><div class="txt"><div class="t">${esc(a.desc||(out?"Retiro":"Ahorro"))}</div><div class="s">${esc(sub)}</div></div>
+      <span class="amt ${out?"neg":"pos"}">${out?"−":"+"} ${isU?usdNum(a.monto):money(a.monto)}</span>${CHEV}</button></div>`;
+  }
+  return h+`</div></section>`;
+}
+
 function viewHist(c){
   const list=[...S.hist].sort((a,b)=>String(b.id).localeCompare(String(a.id)));
   let h="";
@@ -367,11 +439,11 @@ function viewHist(c){
   h+=`<section><div class="ghead"><span>Meses cerrados</span></div><div class="card">`;
   if(!list.length) h+=`<div class="empty-list">Cuando cierres un mes desde Fijos, va a quedar guardado acá con todos sus pagos.</div>`;
   for(const m of list){
-    const gastos=(m.totalF||0)+(m.totalC||0), saldo=(m.sueldo||0)-gastos;
-    const pct=m.sueldo>0?Math.min(100,gastos/m.sueldo*100):100;
+    const ing=m.ingresos??m.sueldo??0, gastos=(m.totalF||0)+(m.totalC||0), saldo=ing-gastos;
+    const pct=ing>0?Math.min(100,gastos/ing*100):100;
     h+=`<div class="row"><button class="body" data-hist="${esc(m.id)}">
-      <div class="txt"><div class="t cap">${esc(mesLabel(m.id))}</div><div class="s">Gastaste ${money(gastos)} de ${money(m.sueldo)}</div>
-      <div class="mbar"><span class="${gastos>(m.sueldo||0)?"over":""}" style="width:${pct}%"></span></div></div>
+      <div class="txt"><div class="t cap">${esc(mesLabel(m.id))}</div><div class="s">Gastaste ${money(gastos)} de ${money(ing)}${m.ahMes?" · ahorraste "+money(m.ahMes):""}</div>
+      <div class="mbar"><span class="${gastos>ing?"over":""}" style="width:${pct}%"></span></div></div>
       <span class="amt ${saldo<0?"neg":"pos"}">${saldo<0?"−":"+"}${money(Math.abs(saldo))}</span>${CHEV}</button></div>`;
   }
   h+=`</div></section>
@@ -392,6 +464,9 @@ function bindView(){
   app.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>openForm(b.dataset.edit,b.dataset.id));
   app.querySelectorAll("[data-hist]").forEach(b=>b.onclick=()=>openHist(b.dataset.hist));
   const on=(id,f)=>{ const e=document.getElementById(id); if(e) e.onclick=f; };
+  on("addExtra",()=>openExtra(null)); on("ahIn",()=>openAhorro(null,"deposito")); on("ahOut",()=>openAhorro(null,"retiro")); on("metaBtn",openMeta);
+  app.querySelectorAll("[data-extra]").forEach(b=>b.onclick=()=>openExtra(b.dataset.extra));
+  app.querySelectorAll("[data-ahorro]").forEach(b=>b.onclick=()=>openAhorro(b.dataset.ahorro));
   on("nuevoMes",openNuevoMes); on("saldar",openSaldar); on("bkSave",saveBackup);
   const bf=document.getElementById("bkFile"), bl=document.getElementById("bkLoad");
   if(bl&&bf){ bl.onclick=()=>bf.click(); bf.onchange=()=>{ if(bf.files[0]) loadBackup(bf.files[0]); bf.value=""; }; }
@@ -404,7 +479,7 @@ function bindView(){
   app.addEventListener("touchend",e=>{
     if(x0==null) return; const dx=e.changedTouches[0].clientX-x0, dy=e.changedTouches[0].clientY-y0; x0=null;
     if(Math.abs(dx)<70||Math.abs(dx)<Math.abs(dy)*1.8||Date.now()-t0>600) return;
-    const i=TABS.indexOf(tab)+(dx<0?1:-1); if(i>=0&&i<TABS.length) goTab(TABS[i]);
+    const i=SWIPE.indexOf(tab)+(dx<0?1:-1); if(SWIPE.includes(tab)&&i>=0&&i<SWIPE.length) goTab(SWIPE[i]);
   },{passive:true});
 })();
 
@@ -493,6 +568,58 @@ function openForm(coll,id){
   if(fd) fd.onclick=()=>{ if(fd.dataset.sure){ del(coll,x.id); closeSheet(); toast("Borrado"); } else { fd.dataset.sure="1"; fd.textContent="Tocá de nuevo"; } };
 }
 
+/* ---------- ingresos extra, ahorros, meta ---------- */
+function formFoot(x){ return `<div class="err" id="ferr" role="alert"></div><div class="row-btns">${x?`<button type="button" class="btn danger" id="fdel">Borrar</button>`:""}<button type="submit" class="btn">${x?"Guardar":"Agregar"}</button></div>`; }
+function bindDel(coll,x){ const fd=document.getElementById("fdel"); if(fd) fd.onclick=()=>{ if(fd.dataset.sure){ del(coll,x.id); closeSheet(); toast("Borrado"); } else { fd.dataset.sure="1"; fd.textContent="Tocá de nuevo"; } }; }
+function openExtra(id){
+  const x=id?S.extras.find(i=>i.id===id):null;
+  openSheet(`<h3 id="sheetTitle">${x?"Editar ingreso":"Ingreso extra"}</h3><form id="f" novalidate><div class="form">
+    <label class="field"><span>Descripción</span><input name="desc" value="${esc(x?.desc||"")}" placeholder="Ej: Trabajo extra" autocomplete="off"></label>
+    <label class="field"><span>Monto</span><input name="monto" inputmode="decimal" value="${fmtIn(x?.monto)}" placeholder="0"></label>
+    <label class="field"><span>Fecha</span><input name="fecha" type="date" value="${esc(x?.fecha||today())}"></label></div>${formFoot(x)}</form>`);
+  const f=document.getElementById("f");
+  f.onsubmit=e=>{ e.preventDefault(); const err=document.getElementById("ferr");
+    const desc=f.elements.desc.value.trim(), monto=parseMoney(f.elements.monto.value);
+    if(!desc){ err.textContent="Escribí de dónde viene el ingreso."; return; }
+    if(monto==null||monto<=0){ err.textContent="Ingresá un monto mayor a cero."; return; }
+    put("extras",x?x.id:newId(),{desc,monto,fecha:f.elements.fecha.value||today(),creado:x?.creado??Date.now()}); closeSheet(); toast(x?"Guardado":"Ingreso agregado"); };
+  bindDel("extras",x);
+}
+function openAhorro(id,tipo){
+  const x=id?S.ahorros.find(i=>i.id===id):null; tipo=x?x.tipo:tipo;
+  const out=tipo==="retiro", mon=x?.moneda||"ARS";
+  openSheet(`<h3 id="sheetTitle">${x?"Editar movimiento":out?"Sacar plata":"Guardar plata"}</h3><form id="f" novalidate>
+    <div class="form"><div class="field stack"><span>Moneda</span>${seg("moneda",[["ARS","Pesos"],["USD","Dólares"]],mon)}</div></div>
+    <div class="form"><label class="field"><span>Monto</span><input name="monto" inputmode="decimal" value="${fmtIn(x?.monto)}" placeholder="0"></label>
+    <label class="field" id="pesosF" ${mon==="USD"?"":"hidden"}><span>${out?"Pesos que recibiste":"Pesos que usaste"}</span><input name="pesos" inputmode="decimal" value="${fmtIn(x?.pesos)}" placeholder="Opcional"></label>
+    <label class="field"><span>Detalle</span><input name="desc" value="${esc(x?.desc||"")}" placeholder="${out?"Ej: Vacaciones":"Ej: Plazo fijo"}" autocomplete="off"></label>
+    <label class="field"><span>Fecha</span><input name="fecha" type="date" value="${esc(x?.fecha||today())}"></label></div>
+    ${formFoot(x)}</form>`);
+  const f=document.getElementById("f"), pf=document.getElementById("pesosF");
+  f.querySelectorAll("input[name=moneda]").forEach(r=>r.onchange=()=>{ pf.hidden=f.elements.moneda.value!=="USD"; });
+  f.onsubmit=e=>{ e.preventDefault(); const err=document.getElementById("ferr");
+    const monto=parseMoney(f.elements.monto.value), moneda=f.elements.moneda.value;
+    if(monto==null||monto<=0){ err.textContent="Ingresá un monto mayor a cero."; return; }
+    const pesos=moneda==="USD"?parseMoney(f.elements.pesos.value):null;
+    put("ahorros",x?x.id:newId(),{tipo,moneda,monto,pesos,desc:f.elements.desc.value.trim(),fecha:f.elements.fecha.value||today(),abierto:x?x.abierto!==false:true,creado:x?.creado??Date.now()});
+    closeSheet(); toast(x?"Guardado":out?"Retiro anotado":"¡Bien ahí! Ahorro anotado"); };
+  bindDel("ahorros",x);
+}
+function openMeta(){
+  const m=S.meta;
+  openSheet(`<h3 id="sheetTitle">Meta de ahorro</h3><p>Ponete un objetivo y la app te muestra cuánto te falta.</p><form id="f" novalidate>
+    <div class="form"><label class="field"><span>Para qué</span><input name="nombre" value="${esc(m?.nombre||"")}" placeholder="Ej: Vacaciones" autocomplete="off"></label>
+    <label class="field"><span>Monto</span><input name="monto" inputmode="decimal" value="${fmtIn(m?.monto)}" placeholder="0"></label>
+    <div class="field stack"><span>Moneda</span>${seg("moneda",[["ARS","Pesos"],["USD","Dólares"]],m?.moneda||"ARS")}</div></div>
+    <div class="err" id="ferr" role="alert"></div>
+    <div class="row-btns">${m?`<button type="button" class="btn danger" id="mdel">Quitar meta</button>`:""}<button type="submit" class="btn">Guardar meta</button></div></form>`);
+  const f=document.getElementById("f");
+  f.onsubmit=e=>{ e.preventDefault(); const monto=parseMoney(f.elements.monto.value);
+    if(monto==null||monto<=0){ document.getElementById("ferr").textContent="Ingresá cuánto querés juntar."; return; }
+    S.meta={nombre:f.elements.nombre.value.trim()||"Ahorro",monto,moneda:f.elements.moneda.value}; save(); closeSheet(); render(); toast("Meta guardada"); };
+  const md=document.getElementById("mdel"); if(md) md.onclick=()=>{ S.meta=null; save(); closeSheet(); render(); toast("Meta quitada"); };
+}
+
 /* ---------- categorías ---------- */
 function openCats(key){
   const names={fijos:"Fijos",chicos:"Del día",comp:"Compartidos"};
@@ -541,7 +668,7 @@ function openNuevoMes(){
   const n=S.chicos.length;
   openSheet(`<h3 id="sheetTitle">Cerrar el mes</h3>
     <div class="form"><label class="field"><span>Mes que cerrás</span><input type="month" id="nmMes" value="${defMes()}"></label></div>
-    <p>Se guarda en el historial con todos sus pagos. Después los fijos vuelven a pendiente; los montos y el sueldo quedan para que solo cambies lo que varió.</p>
+    <p>Se guarda en el historial con todos sus pagos. Después los fijos vuelven a pendiente y los ingresos extra se limpian; los montos, el sueldo y tus ahorros quedan.</p>
     <label class="chkline"><input type="checkbox" id="borrarChicos" ${n?"checked":""}><span>Borrar también los gastos del día (${n})</span></label>
     <div class="row-btns"><button class="btn ghost" id="nmNo">Cancelar</button><button class="btn" id="nmSi">Cerrar mes</button></div>`,false);
   document.getElementById("nmNo").onclick=closeSheet;
@@ -549,11 +676,13 @@ function openNuevoMes(){
     const mes=document.getElementById("nmMes").value, borrar=document.getElementById("borrarChicos").checked;
     if(!/^\d{4}-\d{2}$/.test(mes)){ toast("Elegí el mes que cerrás"); return; }
     const c=calc();
-    const snap={sueldo:c.sueldo,totalF:c.totalF,pagado:c.pagado,totalC:c.totalC,neto:c.neto,cerrado:Date.now(),
+    const snap={sueldo:c.sueldo,totalX:c.totalX,ingresos:c.ingresos,ahMes:c.ahMes,totalF:c.totalF,pagado:c.pagado,totalC:c.totalC,neto:c.neto,cerrado:Date.now(),
+      extras:S.extras.map(x=>({desc:x.desc||"",monto:Number(x.monto)||0,fecha:x.fecha||""})),
       fijos:c.fijos.map(x=>({desc:x.desc||"",cat:x.cat||"",monto:x.monto??null,pagado:!!x.pagado})),
       chicos:S.chicos.map(x=>({desc:x.desc||"",cat:x.cat||"",monto:Number(x.monto)||0,fecha:x.fecha||""}))};
     const i=S.hist.findIndex(h=>h.id===mes); if(i>=0) S.hist[i]={id:mes,...snap}; else S.hist.push({id:mes,...snap});
     S.fijos.forEach(x=>x.pagado=false); if(borrar) S.chicos=[];
+    S.extras=[]; S.ahorros.forEach(a=>a.abierto=false);
     save(); closeSheet(); render(); toast("Mes guardado en el historial");
   };
 }
@@ -570,14 +699,15 @@ function openSaldar(){
 }
 function openHist(id){
   const m=S.hist.find(x=>x.id===id); if(!m) return;
-  const gastos=(m.totalF||0)+(m.totalC||0), saldo=(m.sueldo||0)-gastos, neto=m.neto||0;
+  const ing=m.ingresos??m.sueldo??0, gastos=(m.totalF||0)+(m.totalC||0), saldo=ing-gastos, neto=m.neto||0;
   const bal=Math.abs(neto)<0.005?"Al día":(neto>0?"Sabri le debía ":"Rodri le debía ")+money(Math.abs(neto));
   const line=(t,s,a,cls)=>`<div class="row"><div class="body"><div class="txt"><div class="t">${esc(t)}</div><div class="s">${esc(s)}</div></div><span class="amt ${cls||""}">${a}</span></div></div>`;
   const fij=(m.fijos||[]).map(x=>line(x.desc,(x.pagado?"Pagado":"Quedó pendiente")+(x.cat?" · "+x.cat:""),x.monto==null?"—":money(x.monto),x.pagado?"":"neg")).join("")||`<div class="empty-list">Sin gastos fijos</div>`;
   const chi=[...(m.chicos||[])].sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||"")).map(x=>line(x.desc,[fmtDate(x.fecha),x.cat].filter(Boolean).join(" · "),money(x.monto))).join("")||`<div class="empty-list">Sin gastos del día</div>`;
   openSheet(`<h3 id="sheetTitle" style="text-transform:capitalize">${esc(mesLabel(id))}</h3>
-    <dl class="dl"><dt>Sueldo</dt><dd>${money(m.sueldo)}</dd><dt>Gastos fijos</dt><dd>${money(m.totalF)}</dd>
+    <dl class="dl"><dt>Sueldo</dt><dd>${money(m.sueldo)}</dd>${m.totalX?`<dt>Ingresos extra</dt><dd class="pos">+ ${money(m.totalX)}</dd>`:""}<dt>Gastos fijos</dt><dd>${money(m.totalF)}</dd>
       <dt>Gastos del día</dt><dd>${money(m.totalC)}</dd><dt>${saldo<0?"Faltó":"Sobró"}</dt><dd class="${saldo<0?"neg":"pos"}">${money(Math.abs(saldo))}</dd>
+      ${m.ahMes?`<dt>Ahorraste</dt><dd>${money(m.ahMes)}</dd>`:""}
       <dt>Compartidos al cierre</dt><dd>${esc(bal)}</dd></dl>
     <div class="ghead"><span>Fijos</span><span>${(m.fijos||[]).filter(x=>x.pagado).length} de ${(m.fijos||[]).length} pagados</span></div><div class="card">${fij}</div>
     <div class="ghead"><span>Del día</span></div><div class="card">${chi}</div>
@@ -590,7 +720,7 @@ function openHist(id){
 /* ---------- copia de seguridad ---------- */
 async function saveBackup(){
   const name="pagos-copia-"+today()+".json";
-  const data={app:"control-pagos",version:2,guardado:new Date().toISOString(),sueldo:S.sueldo,fijos:S.fijos,chicos:S.chicos,comp:S.comp,hist:S.hist,cats:S.cats};
+  const data={app:"control-pagos",version:2,guardado:new Date().toISOString(),sueldo:S.sueldo,fijos:S.fijos,chicos:S.chicos,comp:S.comp,hist:S.hist,cats:S.cats,extras:S.extras,ahorros:S.ahorros,meta:S.meta};
   const blob=new Blob([JSON.stringify(data,null,1)],{type:"application/json"});
   try{ const file=new File([blob],name,{type:"application/json"});
     if(navigator.canShare&&navigator.canShare({files:[file]})){ await navigator.share({files:[file],title:"Copia de pagos"}); return; }
